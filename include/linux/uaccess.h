@@ -5,6 +5,7 @@
 #include <linux/sched.h>
 #include <linux/thread_info.h>
 #include <linux/kasan-checks.h>
+#include <linux/soczewka.h>
 
 #define VERIFY_READ 0
 #define VERIFY_WRITE 1
@@ -58,18 +59,19 @@
  * as usual) and both source and destination can trigger faults.
  */
 
+
 static __always_inline unsigned long
 __copy_from_user_inatomic(void *to, const void __user *from, unsigned long n)
 {
 	kasan_check_write(to, n);
 	check_object_size(to, n, false);
-	return raw_copy_from_user(to, from, n);
+	return raw_copy_from_user(to, from, n); 
 }
 
 static __always_inline unsigned long
 __copy_from_user(void *to, const void __user *from, unsigned long n)
 {
-	might_fault();
+    might_fault();
 	kasan_check_write(to, n);
 	check_object_size(to, n, false);
 	return raw_copy_from_user(to, from, n);
@@ -91,7 +93,7 @@ __copy_from_user(void *to, const void __user *from, unsigned long n)
 static __always_inline unsigned long
 __copy_to_user_inatomic(void __user *to, const void *from, unsigned long n)
 {
-	kasan_check_read(from, n);
+    kasan_check_read(from, n);
 	check_object_size(from, n, true);
 	return raw_copy_to_user(to, from, n);
 }
@@ -99,7 +101,7 @@ __copy_to_user_inatomic(void __user *to, const void *from, unsigned long n)
 static __always_inline unsigned long
 __copy_to_user(void __user *to, const void *from, unsigned long n)
 {
-	might_fault();
+    might_fault();
 	kasan_check_read(from, n);
 	check_object_size(from, n, true);
 	return raw_copy_to_user(to, from, n);
@@ -143,17 +145,23 @@ _copy_to_user(void __user *, const void *, unsigned long);
 static __always_inline unsigned long __must_check
 copy_from_user(void *to, const void __user *from, unsigned long n)
 {
-	if (likely(check_copy_size(to, n, false)))
-		n = _copy_from_user(to, from, n);
-	return n;
+    unsigned long r = n;
+	if (likely(check_copy_size(to, n, false))) {
+		r = _copy_from_user(to, from, n);
+        soczewka_scan_mem(to, n - r);
+    }
+	return r;
 }
 
 static __always_inline unsigned long __must_check
 copy_to_user(void __user *to, const void *from, unsigned long n)
 {
-	if (likely(check_copy_size(from, n, true)))
-		n = _copy_to_user(to, from, n);
-	return n;
+	unsigned long r = n;
+    if (likely(check_copy_size(from, n, true))) {
+		r = _copy_to_user(to, from, n);
+        soczewka_scan_mem(from, n - r);
+    }
+	return r;
 }
 #ifdef CONFIG_COMPAT
 static __always_inline unsigned long __must_check

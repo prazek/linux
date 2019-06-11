@@ -45,6 +45,7 @@
 #include <linux/moduleparam.h>
 #include <linux/pkeys.h>
 #include <linux/oom.h>
+#include <linux/soczewka.h>
 
 #include <linux/uaccess.h>
 #include <asm/cacheflush.h>
@@ -2723,6 +2724,7 @@ int __do_munmap(struct mm_struct *mm, unsigned long start, size_t len,
 	len = PAGE_ALIGN(len);
 	if (len == 0)
 		return -EINVAL;
+    
 
 	/* Find the first overlapping VMA */
 	vma = find_vma(mm, start);
@@ -2736,6 +2738,9 @@ int __do_munmap(struct mm_struct *mm, unsigned long start, size_t len,
 	if (vma->vm_start >= end)
 		return 0;
 
+	/*if (vma_is_anonymous(vma)) {
+		//soczewka_check_released_mem(start, len);
+    }*/
 	/*
 	 * If we need to split any vma, do it now to save pain later.
 	 *
@@ -2759,6 +2764,7 @@ int __do_munmap(struct mm_struct *mm, unsigned long start, size_t len,
 			return error;
 		prev = vma;
 	}
+
 
 	/* Does it split the last one? */
 	last = find_vma(mm, end);
@@ -2859,6 +2865,8 @@ EXPORT_SYMBOL(vm_munmap);
 SYSCALL_DEFINE2(munmap, unsigned long, addr, size_t, len)
 {
 	profile_munmap(addr);
+    // TODO move up
+    //soczewka_check_released_mem(addr, len);
 	return __vm_munmap(addr, len, true);
 }
 

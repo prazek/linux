@@ -179,6 +179,7 @@ struct task_struct init_task
 #ifdef CONFIG_SECURITY
 	.security	= NULL,
 #endif
+    .soczewka_reported_words = 0,
 };
 EXPORT_SYMBOL(init_task);
 
