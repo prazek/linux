@@ -1887,6 +1887,8 @@ static __latent_entropy struct task_struct *copy_process(
 	p->sequential_io_avg	= 0;
 #endif
 
+	memset(p->soczewka_reported_words, 0, sizeof(p->soczewka_reported_words));
+	
 	/* Perform scheduler related setup. Assign this task to a CPU. */
 	retval = sched_fork(clone_flags, p);
 	if (retval)

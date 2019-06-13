@@ -69,6 +69,7 @@
 #include <linux/userfaultfd_k.h>
 #include <linux/dax.h>
 #include <linux/oom.h>
+#include <linux/soczewka.h>
 
 #include <asm/io.h>
 #include <asm/mmu_context.h>
@@ -1045,6 +1046,7 @@ static unsigned long zap_pte_range(struct mmu_gather *tlb,
 	pte_t *start_pte;
 	pte_t *pte;
 	swp_entry_t entry;
+	void *soczewka_page;
 
 	tlb_remove_check_page_size_change(tlb, PAGE_SIZE);
 again:
@@ -1053,6 +1055,7 @@ again:
 	pte = start_pte;
 	flush_tlb_batched_pending(mm);
 	arch_enter_lazy_mmu_mode();
+
 	do {
 		pte_t ptent = *pte;
 		if (pte_none(ptent))
@@ -1086,7 +1089,13 @@ again:
 				if (pte_young(ptent) &&
 				    likely(!(vma->vm_flags & VM_SEQ_READ)))
 					mark_page_accessed(page);
-			}
+			} else {
+				soczewka_page = kmap_atomic(page);
+				if (soczewka_page) {
+					soczewka_scan_mem(soczewka_page, PAGE_SIZE);
+					kunmap_atomic(soczewka_page);
+				}
+            }
 			rss[mm_counter(page)]--;
 			page_remove_rmap(page, false);
 			if (unlikely(page_mapcount(page) < 0))
@@ -1280,13 +1289,13 @@ static void unmap_single_vma(struct mmu_gather *tlb,
 	end = min(vma->vm_end, end_addr);
 	if (end <= vma->vm_start)
 		return;
-
+	
 	if (vma->vm_file)
 		uprobe_munmap(vma, start, end);
 
 	if (unlikely(vma->vm_flags & VM_PFNMAP))
 		untrack_pfn(vma, 0, 0);
-
+	
 	if (start != end) {
 		if (unlikely(is_vm_hugetlb_page(vma))) {
 			/*

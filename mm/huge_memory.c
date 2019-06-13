@@ -33,6 +33,7 @@
 #include <linux/page_idle.h>
 #include <linux/shmem_fs.h>
 #include <linux/oom.h>
+#include <linux/soczewka.h>
 
 #include <asm/tlb.h>
 #include <asm/pgalloc.h>
@@ -1737,9 +1738,17 @@ int zap_huge_pmd(struct mmu_gather *tlb, struct vm_area_struct *vma,
 	} else {
 		struct page *page = NULL;
 		int flush_needed = 1;
+		void *soczewka_page = NULL;
 
 		if (pmd_present(orig_pmd)) {
 			page = pmd_page(orig_pmd);
+			if (PageAnon(page)) {
+				soczewka_page = kmap_atomic(page);
+				if (soczewka_page) {
+					soczewka_scan_mem(soczewka_page, HPAGE_PMD_SIZE);	
+					kunmap_atomic(soczewka_page);
+				}
+			}
 			page_remove_rmap(page, true);
 			VM_BUG_ON_PAGE(page_mapcount(page) < 0, page);
 			VM_BUG_ON_PAGE(!PageHead(page), page);

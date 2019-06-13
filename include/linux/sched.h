@@ -29,6 +29,7 @@
 #include <linux/mm_types_task.h>
 #include <linux/task_io_accounting.h>
 #include <linux/rseq.h>
+#include <linux/soczewka.h>
 
 /* task_struct member predeclarations (sorted alphabetically): */
 struct audit_context;
@@ -1205,6 +1206,8 @@ struct task_struct {
 	unsigned long			lowest_stack;
 	unsigned long			prev_lowest_stack;
 #endif
+
+	unsigned long soczewka_reported_words[BITS_TO_LONGS(SOCZEWKA_MAX_NUM_DANGEROUS_WORDS)];
 
 	/*
 	 * New fields for task_struct should be added above here, so that
