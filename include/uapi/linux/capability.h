@@ -366,8 +366,11 @@ struct vfs_ns_cap_data {
 
 #define CAP_AUDIT_READ		37
 
+/* Disables soczewka from searching for dangerous words */
 
-#define CAP_LAST_CAP         CAP_AUDIT_READ
+#define CAP_SYS_SOCZEWKA_IMMUNE 38
+
+#define CAP_LAST_CAP         CAP_SYS_SOCZEWKA_IMMUNE
 
 #define cap_valid(x) ((x) >= 0 && (x) <= CAP_LAST_CAP)
 
